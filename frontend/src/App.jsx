@@ -1,35 +1,134 @@
-import React, { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { CurrencyChart } from './components/CurrencyChart';
 import { CurrencyGrid } from './components/CurrencyGrid';
+import { CurrencySelector } from './components/CurrencySelector';
+import { DateRangePicker } from './components/DateRangePicker';
+import { useCurrencyData } from './hooks/useCurrencyData';
+import { useLocalStorage } from './hooks/useLocalStorage';
+import { getDefaultDateRange } from './utils/dateUtils';
+import { STORAGE_KEYS } from './utils/constants';
 
 function App() {
-  // Dummy data
-  const dummyData = [
-    { date: '2025-11-01', rate: 1.15 },
-    { date: '2025-11-02', rate: 1.17 },
-    { date: '2025-11-03', rate: 1.16 },
-    { date: '2025-11-04', rate: 1.18 },
-    { date: '2025-11-05', rate: 1.19 },
-  ];
+
+  // Persistent filter state
+  const [filterState, setFilterState] = useLocalStorage(
+    STORAGE_KEYS.FILTER_STATE,
+    {
+      currencies: ['USD'],
+      dateRange: getDefaultDateRange()
+    }
+  );
+
+
+  // Fetch currency data with debouncing
+  const { data, loading, refetch } = useCurrencyData({
+    currencies: filterState.currencies,
+    dateRange: filterState.dateRange,
+    enabled: filterState.currencies.length > 0,
+  });
+
+  const handleCurrencyChange = useCallback(
+    (currencies) => {
+      setFilterState((prev) => ({ ...prev, currencies }));
+    },
+    [setFilterState]
+  );
+
+  const handleDateRangeChange = useCallback(
+    (dateRange) => {
+      setFilterState((prev) => ({ ...prev, dateRange }));
+    },
+    [setFilterState]
+  );
+
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <h1 className="text-2xl font-bold mb-6">Currency Dashboard</h1>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+        {/* Header */}
+        <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  Currency Dashboard
+                </h1>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Real-time currency exchange rate analysis and trends
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
 
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">Exchange Rate Chart</h2>
-        <div className="w-full h-96 bg-white p-4 rounded-lg shadow-md">
-          <CurrencyChart data={dummyData} loading={false} />
-        </div>
-      </div>
+                {/* Refresh Button */}
+                <button
+                  onClick={refetch}
+                  disabled={loading}
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:cursor-not-allowed"
+                  aria-label="Refresh data"
+                >
+                  <svg
+                    className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
 
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Detailed Data</h2>
-        <div className="bg-white p-4 rounded-lg shadow-md">
-          <CurrencyGrid data={dummyData} loading={false} />
-        </div>
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Filters */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <CurrencySelector
+                  selectedCurrencies={filterState.currencies}
+                  onChange={handleCurrencyChange}
+                  disabled={loading}
+                />
+                <DateRangePicker
+                  dateRange={filterState.dateRange}
+                  onChange={handleDateRangeChange}
+                  disabled={loading}
+                />
+              </div>
+
+              
+            </div>
+          </div>
+          
+          {/* Chart */}
+          <div className="mb-8">
+            <CurrencyChart data={data} loading={loading} />
+          </div>
+
+          {/* Grid */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+              Detailed Data
+            </h2>
+            <CurrencyGrid data={data} loading={loading} />
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="mt-12 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+              Currency Dashboard - Built with React and Tailwind CSS
+            </p>
+          </div>
+        </footer>
       </div>
-    </div>
   );
 }
 

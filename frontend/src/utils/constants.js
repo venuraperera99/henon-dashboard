@@ -26,5 +26,4 @@ export const DEBOUNCE_DELAY = 500;
 export const STORAGE_KEYS = {
   GRID_STATE: 'currency-dashboard-grid-state',
   FILTER_STATE: 'currency-dashboard-filter-state',
-  DARK_MODE: 'currency-dashboard-dark-mode',
 };

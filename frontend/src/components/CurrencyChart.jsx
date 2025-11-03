@@ -25,17 +25,22 @@ ChartJS.register(
 
 export const CurrencyChart = ({ data, loading = false }) => {
   const chartData = useMemo(() => {
-    if (!data || data.length === 0) {
+    if (!data || !data.rates || Object.keys(data.rates).length === 0) {
       return { labels: [], datasets: [] };
     }
 
-    const dates = data.map((item) => item.date);
-    const rates = data.map((item) => item.rate);
-    const colorConfig = CHART_COLORS.USD;
+    const dates = Object.keys(data.rates).sort();
+    
+    // Get all currencies from the first date entry
+    const firstDateRates = data.rates[dates[0]];
+    const currencies = Object.keys(firstDateRates || {});
 
-    const datasets = [
-      {
-        label: 'Exchange Rate',
+    const datasets = currencies.map((currency, index) => {
+      const rates = dates.map(date => data.rates[date]?.[currency] || 0);
+      const colorConfig = CHART_COLORS[currency] || CHART_COLORS.USD;
+
+      return {
+        label: `${data.base_currency || 'Base'}/${currency}`,
         data: rates,
         borderColor: colorConfig.border,
         backgroundColor: colorConfig.background,
@@ -44,8 +49,8 @@ export const CurrencyChart = ({ data, loading = false }) => {
         pointHoverRadius: 5,
         borderWidth: 2,
         spanGaps: true,
-      },
-    ];
+      };
+    });
 
     return { labels: dates, datasets };
   }, [data]);

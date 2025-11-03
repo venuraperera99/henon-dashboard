@@ -4,28 +4,18 @@ import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 import { formatDisplayDate } from '../utils/dateUtils';
 
-// Custom cell renderer for change with color coding
-const ChangeRenderer = (params) => {
-  const value = params.value;
-  if (value === null || value === undefined) return <span>-</span>;
-
-  const numValue = typeof value === 'number' ? value : parseFloat(value);
-  const color = numValue >= 0 ? 'text-green-600' : 'text-red-600';
-  const sign = numValue >= 0 ? '+' : '';
-
-  return (
-    <span className={`font-medium ${color}`}>
-      {sign}
-      {numValue.toFixed(4)}
-    </span>
-  );
-};
-
-export const CurrencyGrid = ({ data = [], loading = false }) => {
+export const CurrencyGrid = ({ data, loading = false }) => {
   const gridRef = useRef(null);
 
-  const columnDefs = useMemo(
-    () => [
+  // Extract currencies dynamically from data
+  const currencies = useMemo(() => {
+    if (!data || !data.rates) return [];
+    const firstDate = Object.keys(data.rates)[0];
+    return firstDate ? Object.keys(data.rates[firstDate]) : [];
+  }, [data]);
+
+  const columnDefs = useMemo(() => {
+    const cols = [
       {
         headerName: 'Date',
         field: 'date',
@@ -35,20 +25,25 @@ export const CurrencyGrid = ({ data = [], loading = false }) => {
         valueFormatter: (params) =>
           params.value ? formatDisplayDate(params.value) : '',
         pinned: 'left',
-      },
-      {
-        headerName: 'Exchange Rate',
-        field: 'rate',
+      }
+    ];
+
+    // Add a column for each currency
+    currencies.forEach(currency => {
+      cols.push({
+        headerName: `${data.base_currency || 'Rate'}/${currency}`,
+        field: currency,
         sortable: true,
         filter: true,
         width: 200,
         valueFormatter: (params) =>
           params.value ? params.value.toFixed(4) : '-',
         cellStyle: { textAlign: 'right' },
-      },
-    ],
-    []
-  );
+      });
+    });
+
+    return cols;
+  }, [currencies, data]);
 
   const defaultColDef = useMemo(
     () => ({
@@ -86,7 +81,7 @@ export const CurrencyGrid = ({ data = [], loading = false }) => {
     );
   }
 
-  if (!data || data.length === 0) {
+  if (!data || !data.rates || Object.keys(data.rates).length === 0) {
     return (
       <div className="w-full h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg">
         <div className="text-center">
@@ -101,6 +96,12 @@ export const CurrencyGrid = ({ data = [], loading = false }) => {
     );
   }
 
+  // Transform rates object to row data
+  const rowData = Object.entries(data.rates).map(([date, rates]) => ({
+    date,
+    ...rates
+  }));
+
   return (
     <div className="w-full">
       <div
@@ -109,7 +110,7 @@ export const CurrencyGrid = ({ data = [], loading = false }) => {
       >
         <AgGridReact
           ref={gridRef}
-          rowData={data}
+          rowData={rowData}
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           gridOptions={gridOptions}
