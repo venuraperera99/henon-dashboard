@@ -65,7 +65,6 @@ def get_rates():
         if target_currency:
             params['to'] = target_currency
 
-        # Call the API
         response = requests.get(url, params=params)
         response.raise_for_status()
         data = response.json()
@@ -92,7 +91,142 @@ def get_rates():
             'message': 'An unexpected error occurred',
             'details': str(e)
         }), 500
+
+@app.route('/api/rates/multiple', methods=['POST'])
+def get_multiple_rates():
+    """
+    Get exchange rates for multiple currency pairs at once.
     
+    Request Body (JSON):
+        {
+            "pairs": [
+                {
+                    "base": "USD",
+                    "target": "CAD",
+                    "start_date": "2023-01-01",
+                    "end_date": "2023-12-31"
+                },
+                ...
+            ]
+        }
+    
+    Returns:
+        JSON response with rates for all pairs
+    
+    Status Codes:
+        200: Success
+        400: Bad request
+        500: Internal server error
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'pairs' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required field: pairs',
+                'message': 'Request body must contain a "pairs" array'
+            }), 400
+        
+        pairs = data['pairs']
+        
+        if not isinstance(pairs, list) or len(pairs) == 0:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid pairs format',
+                'message': 'pairs must be a non-empty array'
+            }), 400
+        
+        results = []
+        errors = []
+        
+        for idx, pair in enumerate(pairs):
+            try:
+                base = pair.get('base', '').upper()
+                target = pair.get('target', '').upper()
+                start_date = pair.get('start_date', '')
+                end_date = pair.get('end_date', datetime.now().strftime('%Y-%m-%d'))
+                
+                # Validate required fields
+                if not base or not target or not start_date:
+                    raise ValueError("Missing required fields: base, target, or start_date")
+                
+                # Validate currencies
+                supported = ['USD', 'CAD', 'EUR']
+                if base not in supported or target not in supported:
+                    raise ValueError(f"Unsupported currency. Supported: {', '.join(supported)}")
+                
+                if base == target:
+                    raise ValueError("Base and target currencies must be different")
+                
+                url = f"https://api.frankfurter.app/{start_date}..{end_date}"
+                params = {'from': base, 'to': target}
+                
+                response = requests.get(url, params=params, timeout=10)
+                response.raise_for_status()
+                
+                api_data = response.json()
+                
+                # Transform data
+                rates = []
+                if 'rates' in api_data:
+                    for date_str, rate_data in api_data['rates'].items():
+                        if target in rate_data:
+                            rates.append({
+                                'date': date_str,
+                                'rate': rate_data[target]
+                            })
+                
+                rates.sort(key=lambda x: x['date'])
+                
+                results.append({
+                    'success': True,
+                    'base_currency': base,
+                    'target_currency': target,
+                    'start_date': start_date,
+                    'end_date': end_date,
+                    'data': rates,
+                    'count': len(rates)
+                })
+                
+                logger.info(f"Fetched {len(rates)} rates for {base}/{target}")
+                
+            except requests.RequestException as e:
+                errors.append({
+                    'index': idx,
+                    'pair': pair,
+                    'error': f'API request failed: {str(e)}'
+                })
+            except ValueError as e:
+                errors.append({
+                    'index': idx,
+                    'pair': pair,
+                    'error': str(e)
+                })
+            except Exception as e:
+                errors.append({
+                    'index': idx,
+                    'pair': pair,
+                    'error': f'Unexpected error: {str(e)}'
+                })
+        
+        return jsonify({
+            'success': len(errors) == 0,
+            'results': results,
+            'errors': errors if errors else None,
+            'total_pairs': len(pairs),
+            'successful': len(results),
+            'failed': len(errors)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Unexpected error in multiple rates: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Internal server error',
+            'message': str(e)
+        }), 500
+   
 
 @app.errorhandler(404)
 def not_found(error):
