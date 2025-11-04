@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import debounce from 'lodash.debounce';
-import { fetchCurrencyData, fetchCompareCurrencyData } from '../utils/api';
+import { fetchCompareCurrencyData } from '../utils/api';
 import { DEBOUNCE_DELAY } from '../utils/constants';
 
-export function useCurrencyData({ currencies, dateRange, compareMode, enabled = true }) {
-  const [data, setData] = useState(null); // Change to null instead of []
+export function useCurrencyData({ currencies, dateRange, enabled = true }) {
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const abortControllerRef = useRef(null);
 
   const fetchData = useCallback(async () => {
-    if (!enabled || currencies.length === 0) {
+    // Need at least 2 currencies (1 base + 1 comparison)
+    if (!enabled || currencies.length < 2) {
       setData(null);
       return;
     }
@@ -25,23 +26,17 @@ export function useCurrencyData({ currencies, dateRange, compareMode, enabled = 
     setError(null);
 
     try {
-      let response;
-
-      if (compareMode && currencies.length > 1) {
-        const [baseCurrency, ...compareCurrencies] = currencies;
-        response = await fetchCompareCurrencyData(
-          baseCurrency,
-          compareCurrencies,
-          dateRange
-        );
-      } else {
-        console.log("sINgLE")
-        response = await fetchCurrencyData(currencies, dateRange);
-      }
+      // First currency is always the base
+      const [baseCurrency, ...compareCurrencies] = currencies;
+      
+      const response = await fetchCompareCurrencyData(
+        baseCurrency,
+        compareCurrencies,
+        dateRange
+      );
 
       console.log('[useCurrencyData] Response received:', response);
 
-      // Set the entire response object, not just response.data
       if (response) {
         setData(response);
       } else {
@@ -56,7 +51,7 @@ export function useCurrencyData({ currencies, dateRange, compareMode, enabled = 
     } finally {
       setLoading(false);
     }
-  }, [currencies, dateRange, compareMode, enabled]);
+  }, [currencies, dateRange, enabled]);
 
   // Debounced version of fetchData
   const debouncedFetchData = useRef(

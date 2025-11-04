@@ -29,69 +29,6 @@ def health_check():
     }), 200
 
 
-@app.route('/api/rates', methods=['GET'])
-def get_rates():
-    """
-    Get exchange rates from the Frankfurt API.
-
-    Query Parameters:
-        base (str): Base currency code (e.g., USD, EUR, CAD)
-        target (str): Target currency code (optional)
-        start_date (str): Start date in YYYY-MM-DD format (optional)
-        end_date (str): End date in YYYY-MM-DD format (optional)
-    """
-    try:
-        base_currency = request.args.get('base', '').upper()
-        target_currency = request.args.get('target', '').upper()
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-
-        if not base_currency:
-            return jsonify({
-                'success': False,
-                'error': 'Missing required parameter: base',
-                'message': 'Base currency code is required (USD, CAD, EUR, etc.)'
-            }), 400
-
-        # Construct Frankfurt API URL
-        if start_date and end_date:
-            url = f"{FRANKFURT_API_URL}/{start_date}..{end_date}"
-        elif start_date:
-            url = f"{FRANKFURT_API_URL}/{start_date}"
-        else:
-            url = f"{FRANKFURT_API_URL}/latest"
-
-        params = {'from': base_currency}
-        if target_currency:
-            params['to'] = target_currency
-
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-
-        return jsonify({
-            'success': True,
-            'data': data
-        }), 200
-
-    except requests.RequestException as e:
-        logger.error(f"External API error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': 'External API error',
-            'message': 'Failed to fetch data from Frankfurt API',
-            'details': str(e)
-        }), 500
-
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': 'Internal server error',
-            'message': 'An unexpected error occurred',
-            'details': str(e)
-        }), 500
-
 @app.route('/api/rates/multiple', methods=['POST'])
 def get_multiple_rates():
     """
@@ -151,23 +88,26 @@ def get_multiple_rates():
                 if not base or not target or not start_date:
                     raise ValueError("Missing required fields: base, target, or start_date")
                 
-                # Validate currencies
-                supported = ['USD', 'CAD', 'EUR']
+                # Validate currencies (you can expand this list)
+                supported = ['USD', 'CAD', 'EUR', 'GBP', 'JPY', 'AUD', 'CHF', 'NZD']
                 if base not in supported or target not in supported:
                     raise ValueError(f"Unsupported currency. Supported: {', '.join(supported)}")
                 
                 if base == target:
                     raise ValueError("Base and target currencies must be different")
                 
-                url = f"https://api.frankfurter.app/{start_date}..{end_date}"
+                # Fetch from Frankfurter API
+                url = f"{FRANKFURT_API_URL}/{start_date}..{end_date}"
                 params = {'from': base, 'to': target}
+                
+                logger.info(f"Fetching {base}/{target} from {start_date} to {end_date}")
                 
                 response = requests.get(url, params=params, timeout=10)
                 response.raise_for_status()
                 
                 api_data = response.json()
                 
-                # Transform data
+                # Transform data to array format
                 rates = []
                 if 'rates' in api_data:
                     for date_str, rate_data in api_data['rates'].items():
@@ -177,6 +117,7 @@ def get_multiple_rates():
                                 'rate': rate_data[target]
                             })
                 
+                # Sort by date ascending
                 rates.sort(key=lambda x: x['date'])
                 
                 results.append({
@@ -189,21 +130,24 @@ def get_multiple_rates():
                     'count': len(rates)
                 })
                 
-                logger.info(f"Fetched {len(rates)} rates for {base}/{target}")
+                logger.info(f"Successfully fetched {len(rates)} rates for {base}/{target}")
                 
             except requests.RequestException as e:
+                logger.error(f"API request failed for pair {idx}: {str(e)}")
                 errors.append({
                     'index': idx,
                     'pair': pair,
                     'error': f'API request failed: {str(e)}'
                 })
             except ValueError as e:
+                logger.warning(f"Validation error for pair {idx}: {str(e)}")
                 errors.append({
                     'index': idx,
                     'pair': pair,
                     'error': str(e)
                 })
             except Exception as e:
+                logger.error(f"Unexpected error for pair {idx}: {str(e)}")
                 errors.append({
                     'index': idx,
                     'pair': pair,
@@ -220,13 +164,13 @@ def get_multiple_rates():
         }), 200
         
     except Exception as e:
-        logger.error(f"Unexpected error in multiple rates: {str(e)}")
+        logger.error(f"Unexpected error in get_multiple_rates: {str(e)}")
         return jsonify({
             'success': False,
             'error': 'Internal server error',
             'message': str(e)
         }), 500
-   
+
 
 @app.errorhandler(404)
 def not_found(error):
@@ -261,4 +205,5 @@ def internal_error(error):
 
 if __name__ == '__main__':
     # Run Flask in development mode
+    # For production, use: gunicorn -w 4 -b 0.0.0.0:5000 app:app
     app.run(host='0.0.0.0', port=5000, debug=True)

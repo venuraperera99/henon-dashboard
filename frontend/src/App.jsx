@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { CurrencyChart } from './components/CurrencyChart';
 import { CurrencyGrid } from './components/CurrencyGrid';
 import { CurrencySelector } from './components/CurrencySelector';
@@ -9,19 +9,18 @@ import { getDefaultDateRange } from './utils/dateUtils';
 import { STORAGE_KEYS } from './utils/constants';
 
 function App() {
-
-  // Persistent filter state
+  // Persistent filter state (removed compareMode)
   const [filterState, setFilterState] = useLocalStorage(
     STORAGE_KEYS.FILTER_STATE,
     {
-      currencies: ['USD'],
-      dateRange: getDefaultDateRange()
+      currencies: [], // Start with empty - user must select base first
+      dateRange: getDefaultDateRange(),
     }
   );
 
 
   // Fetch currency data with debouncing
-  const { data, loading, refetch } = useCurrencyData({
+  const { data, loading, error, refetch } = useCurrencyData({
     currencies: filterState.currencies,
     dateRange: filterState.dateRange,
     enabled: filterState.currencies.length > 0,
@@ -43,7 +42,7 @@ function App() {
 
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
         {/* Header */}
         <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -57,12 +56,12 @@ function App() {
                 </p>
               </div>
               <div className="flex items-center gap-4">
-
+              
                 {/* Refresh Button */}
                 <button
                   onClick={refetch}
                   disabled={loading}
-                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:cursor-not-allowed"
                   aria-label="Refresh data"
                 >
                   <svg
@@ -102,10 +101,18 @@ function App() {
                 />
               </div>
 
-              
+              {/* Loading indicator */}
+              {loading && (
+                <div className="flex items-center justify-center pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    Loading exchange rates...
+                  </span>
+                </div>
+              )}
             </div>
           </div>
-          
+
           {/* Chart */}
           <div className="mb-8">
             <CurrencyChart data={data} loading={loading} />
@@ -124,7 +131,7 @@ function App() {
         <footer className="mt-12 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-              Currency Dashboard - Built with React and Tailwind CSS
+              Currency Dashboard - Built with React, TypeScript, and Tailwind CSS
             </p>
           </div>
         </footer>
@@ -132,4 +139,4 @@ function App() {
   );
 }
 
-export default App;
+export default App
