@@ -9,7 +9,6 @@ A full-stack currency exchange rate dashboard built with React, and Flask. Featu
 - **Interactive Charts** - Multi-line time series visualization with Chart.js
 - **Advanced Data Grid** - AG Grid with filtering, sorting, and local storage persistence
 - **Responsive Design** - Mobile-first design with Tailwind CSS
-- **Debounced API Calls** - Optimized performance with request debouncing
 
 ### Backend (Flask + Python)
 - **RESTful API** - Clean API design with 1 main endpoint
