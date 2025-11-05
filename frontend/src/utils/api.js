@@ -10,7 +10,6 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor for logging
 apiClient.interceptors.request.use(
   (config) => {
     console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
@@ -21,7 +20,6 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -51,7 +49,6 @@ apiClient.interceptors.response.use(
  */
 export const fetchCompareCurrencyData = async (baseCurrency, compareCurrencies, dateRange) => {
   try {
-    // Filter out base currency from compare currencies (safety check)
     const targetCurrencies = compareCurrencies.filter(c => c !== baseCurrency);
     
     if (targetCurrencies.length === 0) {
@@ -67,7 +64,6 @@ export const fetchCompareCurrencyData = async (baseCurrency, compareCurrencies, 
       };
     }
 
-    // Build pairs for all comparisons
     const pairs = targetCurrencies.map(targetCurrency => ({
       base: baseCurrency,
       target: targetCurrency,
@@ -77,7 +73,6 @@ export const fetchCompareCurrencyData = async (baseCurrency, compareCurrencies, 
 
     console.log('[API] Fetching pairs:', pairs);
 
-    // Always use /api/rates/multiple (works for 1 or more pairs)
     const response = await apiClient.post('/api/rates/multiple', {
       pairs: pairs
     });
@@ -88,7 +83,6 @@ export const fetchCompareCurrencyData = async (baseCurrency, compareCurrencies, 
       throw new Error('Failed to fetch currency pairs');
     }
 
-    // Transform multiple results into rates object format
     const ratesObject = {};
     
     response.data.results.forEach((result) => {

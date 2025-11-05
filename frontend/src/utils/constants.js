@@ -21,8 +21,6 @@ export const CHART_COLORS = {
 
 export const MAX_DATE_RANGE_YEARS = 2;
 
-export const DEBOUNCE_DELAY = 500;
-
 export const STORAGE_KEYS = {
   GRID_STATE: 'currency-dashboard-grid-state',
   FILTER_STATE: 'currency-dashboard-filter-state',
