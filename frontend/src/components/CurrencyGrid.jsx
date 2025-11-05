@@ -1,3 +1,28 @@
+/**
+ * CurrencyGrid Component
+ *
+ * Displays currency exchange rate data in a responsive and sortable AG Grid table.
+ * Each column represents a currency, and each row represents a date with rates.
+ *
+ * Core Features:
+ * - Dynamically generates columns based on currencies in the dataset
+ * - Displays formatted dates using formatDisplayDate
+ * - Supports sorting, pagination and filtering
+ * - Shows a loading state and fallback message when no data is available
+ *
+ * Props:
+ * @param {Object} data - Exchange rate data object with the structure:
+ *   {
+ *     base_currency: 'USD',
+ *     rates: {
+ *       '2024-01-01': { EUR: 0.92, CAD: 1.34 },
+ *       '2024-01-02': { EUR: 0.93, CAD: 1.35 },
+ *     }
+ *   }
+ * @param {boolean} [loading=false] - Whether the grid is currently loading
+ *
+ */
+
 import { useRef, useMemo, useCallback } from 'react';
 import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/styles/ag-grid.css';
@@ -7,13 +32,20 @@ import { formatDisplayDate } from '../utils/dateUtils';
 export const CurrencyGrid = ({ data, loading = false }) => {
   const gridRef = useRef(null);
 
-  // Extract currencies dynamically from data
+  /**
+   * Derive available currencies from the dataset.
+   * Extracted dynamically to support varying currency lists.
+   */
   const currencies = useMemo(() => {
     if (!data || !data.rates) return [];
     const firstDate = Object.keys(data.rates)[0];
     return firstDate ? Object.keys(data.rates[firstDate]) : [];
   }, [data]);
 
+  /**
+   * Define grid column structure.
+   * Includes a "Date" column and one column per currency.
+   */
   const columnDefs = useMemo(() => {
     const cols = [
       {
@@ -25,10 +57,9 @@ export const CurrencyGrid = ({ data, loading = false }) => {
         valueFormatter: (params) =>
           params.value ? formatDisplayDate(params.value) : '',
         pinned: 'left',
-      }
+      },
     ];
 
-    // Add a column for each currency
     currencies.forEach(currency => {
       cols.push({
         headerName: `${data.base_currency || 'Rate'}/${currency}`,
@@ -45,6 +76,7 @@ export const CurrencyGrid = ({ data, loading = false }) => {
     return cols;
   }, [currencies, data]);
 
+  /** Default behavior for all columns */
   const defaultColDef = useMemo(
     () => ({
       resizable: true,
@@ -54,6 +86,7 @@ export const CurrencyGrid = ({ data, loading = false }) => {
     []
   );
 
+  /** Base grid configuration */
   const gridOptions = useMemo(
     () => ({
       animateRows: true,
@@ -66,10 +99,12 @@ export const CurrencyGrid = ({ data, loading = false }) => {
     []
   );
 
+  /** Auto-fit columns when the grid initializes */
   const onGridReady = useCallback((params) => {
     params.api.sizeColumnsToFit();
   }, []);
 
+  // Loading placeholder
   if (loading) {
     return (
       <div className="w-full h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -81,6 +116,7 @@ export const CurrencyGrid = ({ data, loading = false }) => {
     );
   }
 
+  // Fallback when no data is available
   if (!data || !data.rates || Object.keys(data.rates).length === 0) {
     return (
       <div className="w-full h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -96,10 +132,10 @@ export const CurrencyGrid = ({ data, loading = false }) => {
     );
   }
 
-  // Transform rates object to row data
+  /** Convert nested rates object into an array for AG Grid */
   const rowData = Object.entries(data.rates).map(([date, rates]) => ({
     date,
-    ...rates
+    ...rates,
   }));
 
   return (

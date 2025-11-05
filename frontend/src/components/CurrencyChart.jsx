@@ -1,3 +1,38 @@
+/**
+ * CurrencyChart Component
+ *
+ * Displays currency exchange rate trends over time using a line chart.
+ * Utilizes Chart.js via react-chartjs-2 for rendering.
+ *
+ * Features:
+ * - Dynamically generates datasets for each currency in the data
+ * - Formats dates on X-axis and numeric rates on Y-axis
+ * - Supports dark mode styling
+ * - Handles loading and no-data states with user-friendly messages
+ *
+ * Props:
+ * @param {Object} data - Currency exchange data in the structure:
+ *   {
+ *     base_currency: 'USD',
+ *     rates: {
+ *       '2024-01-01': { EUR: 0.92, CAD: 1.34 },
+ *       '2024-01-02': { EUR: 0.93, CAD: 1.35 },
+ *     }
+ *   }
+ * @param {boolean} [loading=false] - Whether the chart is currently loading
+ *
+ * Example usage:
+ * ```jsx
+ * <CurrencyChart
+ *   data={{
+ *     base_currency: 'USD',
+ *     rates: { '2024-01-01': { EUR: 0.92, CAD: 1.34 } }
+ *   }}
+ *   loading={false}
+ * />
+ * ```
+ */
+
 import { useMemo } from 'react';
 import {
   Chart as ChartJS,
@@ -13,6 +48,7 @@ import { Line } from 'react-chartjs-2';
 import { CHART_COLORS } from '../utils/constants';
 import { formatDisplayDate } from '../utils/dateUtils';
 
+// Register chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -24,14 +60,17 @@ ChartJS.register(
 );
 
 export const CurrencyChart = ({ data, loading = false }) => {
+  /**
+   * Transform API data into Chart.js format
+   * - labels: sorted dates
+   * - datasets: one per currency with custom colors and styling
+   */
   const chartData = useMemo(() => {
     if (!data || !data.rates || Object.keys(data.rates).length === 0) {
       return { labels: [], datasets: [] };
     }
 
     const dates = Object.keys(data.rates).sort();
-    
-    // Get all currencies from the first date entry
     const firstDateRates = data.rates[dates[0]];
     const currencies = Object.keys(firstDateRates || {});
 
@@ -55,6 +94,12 @@ export const CurrencyChart = ({ data, loading = false }) => {
     return { labels: dates, datasets };
   }, [data]);
 
+  /**
+   * Chart configuration
+   * - responsive with maintainAspectRatio false
+   * - X/Y axis formatting
+   * - Custom tooltips showing formatted dates and rates
+   */
   const options = useMemo(
     () => ({
       responsive: true,
@@ -65,20 +110,14 @@ export const CurrencyChart = ({ data, loading = false }) => {
           labels: {
             usePointStyle: true,
             padding: 20,
-            font: {
-              size: 12,
-              weight: 'bold',
-            },
+            font: { size: 12, weight: 'bold' },
             color: 'rgb(107, 114, 128)',
           },
         },
         title: {
           display: true,
           text: 'Currency Exchange Rate Trends',
-          font: {
-            size: 16,
-            weight: 'bold',
-          },
+          font: { size: 16, weight: 'bold' },
           color: 'rgb(107, 114, 128)',
           padding: { top: 10, bottom: 20 },
         },
@@ -138,6 +177,7 @@ export const CurrencyChart = ({ data, loading = false }) => {
     []
   );
 
+  // Loading placeholder
   if (loading) {
     return (
       <div className="w-full h-96 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -149,6 +189,7 @@ export const CurrencyChart = ({ data, loading = false }) => {
     );
   }
 
+  // Fallback when no data is available
   if (!data || data.length === 0) {
     return (
       <div className="w-full h-96 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg">

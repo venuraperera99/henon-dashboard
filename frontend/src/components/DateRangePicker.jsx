@@ -1,3 +1,22 @@
+/**
+ * DateRangePicker Component
+ * 
+ * A reusable date range selector that allows users to pick a start and end date 
+ * within a maximum allowed window which is 2 years as per assignment requirements. 
+ * 
+ * It validates the range dynamically and provides feedback if the user selects invalid dates
+ * 
+ * Props:
+ * - dateRange: { startDate: string, endDate: string }
+ *     The currently selected range, formatted as 'YYYY-MM-DD'.
+ * 
+ * - onChange: function({ startDate, endDate })
+ *     Callback triggered whenever a valid new date range is selected.
+ * 
+ * - disabled: boolean (optional)
+ *     Disables the input fields when true.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { formatDate, validateDateRange, getMaxStartDate } from '../utils/dateUtils';
 
@@ -6,11 +25,18 @@ export const DateRangePicker = ({ dateRange, onChange, disabled = false }) => {
   const [localEndDate, setLocalEndDate] = useState(dateRange.endDate);
   const [error, setError] = useState('');
 
+  /**
+   * Keep local state in sync if the parent updates the date range.
+   */
   useEffect(() => {
     setLocalStartDate(dateRange.startDate);
     setLocalEndDate(dateRange.endDate);
   }, [dateRange]);
 
+  /**
+   * Handles updates to the start date.
+   * Validates the new range and triggers onChange if valid.
+   */
   const handleStartDateChange = (e) => {
     const newStartDate = e.target.value;
     setLocalStartDate(newStartDate);
@@ -23,6 +49,10 @@ export const DateRangePicker = ({ dateRange, onChange, disabled = false }) => {
     }
   };
 
+  /**
+   * Handles updates to the end date.
+   * Validates the new range and triggers onChange if valid.
+   */
   const handleEndDateChange = (e) => {
     const newEndDate = e.target.value;
     setLocalEndDate(newEndDate);
@@ -35,6 +65,7 @@ export const DateRangePicker = ({ dateRange, onChange, disabled = false }) => {
     }
   };
 
+  // Define boundaries for selectable dates
   const maxStartDate = getMaxStartDate(localEndDate);
   const today = formatDate(new Date());
 
@@ -48,6 +79,7 @@ export const DateRangePicker = ({ dateRange, onChange, disabled = false }) => {
       </label>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Start Date Input */}
         <div>
           <label htmlFor="start-date" className="sr-only">
             Start Date
@@ -75,6 +107,7 @@ export const DateRangePicker = ({ dateRange, onChange, disabled = false }) => {
           />
         </div>
 
+        {/* End Date Input */}
         <div>
           <label htmlFor="end-date" className="sr-only">
             End Date
@@ -103,6 +136,7 @@ export const DateRangePicker = ({ dateRange, onChange, disabled = false }) => {
         </div>
       </div>
 
+      {/* Validation Error Message */}
       {error && (
         <p
           id="date-range-error"
