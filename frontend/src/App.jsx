@@ -9,7 +9,7 @@ import { getDefaultDateRange } from './utils/dateUtils';
 import { STORAGE_KEYS } from './utils/constants';
 
 function App() {
-  // Persistent filter state (removed compareMode)
+
   const [filterState, setFilterState] = useLocalStorage(
     STORAGE_KEYS.FILTER_STATE,
     {
@@ -19,7 +19,7 @@ function App() {
   );
 
 
-  // Fetch currency data with debouncing
+  // Fetch currency data
   const { data, loading, error, refetch } = useCurrencyData({
     currencies: filterState.currencies,
     dateRange: filterState.dateRange,

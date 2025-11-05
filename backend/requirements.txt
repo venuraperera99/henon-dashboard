@@ -7,6 +7,3 @@ Flask-CORS==4.0.0
 
 # HTTP library for API requests
 requests==2.31.0
-
-# Development tools
-python-dotenv==1.0.0
