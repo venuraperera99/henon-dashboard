@@ -1,7 +1,33 @@
+/**
+ * useCurrencyData Hook
+ * 
+ * Custom React hook responsible for fetching and managing currency exchange rate data
+ * for one or more selected currencies over a given date range.
+ *
+ * Core Features:
+ * - Fetch exchange rate data using `fetchCompareCurrencyData`
+ * - Handle loading and error states
+ * - Cancel in-flight requests to prevent race conditions
+ *
+ *
+ * Parameters:
+ * @param {Object} options
+ * @param {string[]} options.currencies - List of currencies where the first is the base and the rest are targets
+ * @param {Object} options.dateRange - Contains `startDate` and `endDate` for fetching historical data
+ * @param {boolean} [options.enabled=true] - Controls whether data fetching should be active
+ *
+ * Returns:
+ * @returns {Object} {
+ *   data: CurrencyApiResponse | null,   // API response data
+ *   loading: boolean,                   // Indicates if the fetch is in progress
+ *   error: Error | null,                // Any fetch or API-related error
+ *   refetch: Function                   // Manual trigger to re-fetch the data
+ * }
+ *
+ */
+
 import { useState, useEffect, useCallback, useRef } from 'react';
-import debounce from 'lodash.debounce';
 import { fetchCompareCurrencyData } from '../utils/api';
-import { DEBOUNCE_DELAY } from '../utils/constants';
 
 export function useCurrencyData({ currencies, dateRange, enabled = true }) {
   const [data, setData] = useState(null);
@@ -10,13 +36,12 @@ export function useCurrencyData({ currencies, dateRange, enabled = true }) {
   const abortControllerRef = useRef(null);
 
   const fetchData = useCallback(async () => {
-    // Need at least 2 currencies (1 base + 1 comparison)
     if (!enabled || currencies.length < 2) {
       setData(null);
       return;
     }
 
-    // Cancel previous request
+    // Cancel previous request if any
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -26,22 +51,15 @@ export function useCurrencyData({ currencies, dateRange, enabled = true }) {
     setError(null);
 
     try {
-      // First currency is always the base
       const [baseCurrency, ...compareCurrencies] = currencies;
-      
+
       const response = await fetchCompareCurrencyData(
         baseCurrency,
         compareCurrencies,
         dateRange
       );
 
-      console.log('[useCurrencyData] Response received:', response);
-
-      if (response) {
-        setData(response);
-      } else {
-        throw new Error('Failed to fetch currency data');
-      }
+      setData(response || null);
     } catch (err) {
       if (err.name !== 'AbortError') {
         console.error('[useCurrencyData] Error:', err);
@@ -53,21 +71,16 @@ export function useCurrencyData({ currencies, dateRange, enabled = true }) {
     }
   }, [currencies, dateRange, enabled]);
 
-  // Debounced version of fetchData
-  const debouncedFetchData = useRef(
-    debounce(fetchData, DEBOUNCE_DELAY, { leading: false, trailing: true })
-  ).current;
-
+  // Fetch whenever currencies or dateRange change
   useEffect(() => {
-    debouncedFetchData();
+    fetchData();
 
     return () => {
-      debouncedFetchData.cancel();
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
-  }, [debouncedFetchData]);
+  }, [fetchData]);
 
   const refetch = useCallback(() => {
     fetchData();

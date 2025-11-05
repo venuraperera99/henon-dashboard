@@ -1,11 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
 
+/**
+ * Custom React Hook: useLocalStorage
+ *
+ * This hook manages state that persists in the browser's `localStorage`.
+ * It works similarly to `useState`, but automatically reads and writes values
+ * from/to localStorage using the provided key. 
+ *
+ * Key Features:
+ * - Reads the initial value from localStorage on mount (if it exists)
+ * - Updates localStorage whenever the state changes
+ * - Keeps values in sync across browser tabs via the `storage` event
+ *
+ * @param {string} key - The key used to store and retrieve data from localStorage.
+ * @param {*} initialValue - The default value used if no stored value is found.
+ * @returns {[any, Function]} A stateful value and a setter function, similar to `useState`.
+ * 
+ *
+ */
 export function useLocalStorage(key, initialValue) {
-  // State to store the value
+  // Initialize state with a value from localStorage if available
   const [storedValue, setStoredValue] = useState(() => {
-    if (typeof window === 'undefined') {
-      return initialValue;
-    }
+    if (typeof window === 'undefined') return initialValue;
 
     try {
       const item = window.localStorage.getItem(key);
@@ -16,7 +32,10 @@ export function useLocalStorage(key, initialValue) {
     }
   });
 
-  // Setter function that also updates localStorage
+  /**
+   * Setter function that updates both React state and localStorage.
+   * Accepts either a direct value or an updater function.
+   */
   const setValue = useCallback(
     (value) => {
       try {
@@ -33,6 +52,10 @@ export function useLocalStorage(key, initialValue) {
     [key, storedValue]
   );
 
+  /**
+   * Sync localStorage changes between multiple browser tabs.
+   * When a `storage` event occurs for the same key, update local state.
+   */
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === key && e.newValue) {
